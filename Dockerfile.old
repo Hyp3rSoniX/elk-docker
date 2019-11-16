@@ -7,10 +7,10 @@
 # Run with:
 # docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 -it --name elk <repo-user>/elk
 
-FROM hyp3rsonix/ubuntu-1810
-MAINTAINER M. Emre Akkus
+FROM phusion/baseimage:0.11
+MAINTAINER Sebastien Pujadas http://pujadas.net
 ENV \
- REFRESHED_AT=2019-11-14
+ REFRESHED_AT=2017-02-28
 
 
 ###############################################################################
@@ -21,14 +21,14 @@ ENV \
 
 RUN set -x \
  && apt update -qq \
- && apt install -qqy --no-install-recommends ca-certificates curl gosu tzdata openjdk-8-jdk zip unzip \
+ && apt install -qqy --no-install-recommends ca-certificates curl gosu tzdata openjdk-8-jdk \
  && apt clean \
  && rm -rf /var/lib/apt/lists/* \
  && gosu nobody true \
  && set +x
 
 ### install Elasticsearch
-ARG ELK_VERSION=7.4.2
+ARG ELK_VERSION=7.4.0
 ENV \
  ES_VERSION=${ELK_VERSION} \
  ES_HOME=/opt/elasticsearch \
@@ -37,8 +37,8 @@ ENV \
 
 # note you can't define an env var that references another one in the same block (docker layer)
 ENV \
- JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64/jre \
- ES_PACKAGE=elasticsearch-${ES_VERSION}-no-jdk-linux-x86_64.tar.gz \
+ JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre \
+ ES_PACKAGE=elasticsearch-${ES_VERSION}-linux-x86_64.tar.gz \
  ES_GID=991 \
  ES_UID=991 \
  ES_PATH_CONF=/etc/elasticsearch \
@@ -73,18 +73,10 @@ RUN mkdir ${LOGSTASH_HOME} \
  && groupadd -r logstash -g ${LOGSTASH_GID} \
  && useradd -r -s /usr/sbin/nologin -d ${LOGSTASH_HOME} -c "Logstash service user" -u ${LOGSTASH_UID} -g logstash logstash \
  && mkdir -p /var/log/logstash ${LOGSTASH_PATH_CONF}/conf.d \
- && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF} \
- && mkdir -p /tmp/jruby-complete \
- && unzip -q /opt/logstash/logstash-core/lib/jars/jruby-complete-9.2.8.0.jar -d /tmp/jruby-complete \
- && cp /tmp/jruby-complete/META-INF/jruby.home/lib/ruby/stdlib/ffi/platform/aarch64-linux/types.conf /tmp/jruby-complete/META-INF/jruby.home/lib/ruby/stdlib/ffi/platform/aarch64-linux/platform.conf \
- && cd /tmp/jruby-complete \
- && zip -qr /tmp/jruby-complete-9.2.8.0.jar * \
- && cp -f /tmp/jruby-complete-9.2.8.0.jar /opt/logstash/logstash-core/lib/jars/jruby-complete-9.2.8.0.jar
+ && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF}
 
 
 ### install Kibana
-
-ADD ./nodegit /temp/nodegit
 
 ENV \
  KIBANA_HOME=/opt/kibana \
@@ -99,16 +91,7 @@ RUN mkdir ${KIBANA_HOME} \
  && groupadd -r kibana -g ${KIBANA_GID} \
  && useradd -r -s /usr/sbin/nologin -d ${KIBANA_HOME} -c "Kibana service user" -u ${KIBANA_UID} -g kibana kibana \
  && mkdir -p /var/log/kibana \
- && chown -R kibana:kibana ${KIBANA_HOME} /var/log/kibana \
- && rm -rf /opt/kibana/node/* \
- && curl -sL https://nodejs.org/dist/v10.15.2/node-v10.15.2-linux-arm64.tar.gz | tar -C /opt/kibana/node/ --strip-components=1 -xzf - \
- && chown -R kibana:kibana ${KIBANA_HOME} /opt/kibana/node \
- && chmod -R 777 /temp/nodegit \
- && cp -rf /temp/nodegit/build/Release /opt/kibana/node_modules/@elastic/nodegit/build \
- && cp /temp/nodegit/dist/enums.js /opt/kibana/node_modules/@elastic/nodegit/dist \
- && mv /opt/kibana/node_modules/@elastic/node-ctags/ctags/build/ctags-node-v64-linux-x64 /opt/kibana/node_modules/@elastic/node-ctags/ctags/build/ctags-node-v64-linux-arm64 \
- && cp /temp/nodegit/node_modules/ctags/build/Release/ctags.node /opt/kibana/node_modules/@elastic/node-ctags/ctags/build/ctags-node-v64-linux-arm64 \
- && rm -rf /temp/nodegit
+ && chown -R kibana:kibana ${KIBANA_HOME} /var/log/kibana
 
 
 ###############################################################################
